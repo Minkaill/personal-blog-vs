@@ -8,18 +8,20 @@ import "easymde/dist/easymde.min.css";
 import styles from "./AddPost.module.scss";
 import { useSelector, useDispatch } from "react-redux";
 import { selectIsAuth } from "../../redux/slices/auth";
-import { Navigate } from "react-router-dom";
+import { useNavigate, Navigate } from "react-router-dom";
 import axios from "../../axios";
 
 export const AddPost = () => {
+  const navigate = useNavigate();
   const isAuth = useSelector(selectIsAuth);
-  const [value, setValue] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [text, setText] = React.useState("");
   const [title, setTitle] = React.useState("");
   const [imageUrl, setImageUrl] = React.useState("");
   const [tags, setTags] = React.useState("");
   const inputFileRef = React.useRef(null);
 
-  console.log({ title, tags, value });
+  console.log({ title, tags, text });
 
   const handleChangeFile = async (e) => {
     try {
@@ -27,7 +29,7 @@ export const AddPost = () => {
       const file = e.target.files[0];
       formData.append("image", file);
       const { data } = await axios.post("/upload", formData);
-      console.log('123')
+      console.log("123");
       setImageUrl(data.url);
     } catch (error) {
       console.warn(error);
@@ -36,10 +38,32 @@ export const AddPost = () => {
   };
   console.log(imageUrl);
 
-  const onClickRemoveImage = () => {};
+  const onClickRemoveImage = () => {
+    setImageUrl("");
+  };
+
+  const onSubmit = async () => {
+    try {
+      setIsLoading(true);
+
+      const fields = {
+        title,
+        imageUrl,
+        tags: tags.split(','),
+        text,
+      };
+
+      const { data } = await axios.post("/posts", fields);
+      const id = data._id;
+      navigate(`/posts/${id}`);
+    } catch (error) {
+      alert(`Ошибка при создании статьи!`);
+      console.warn(error);
+    }
+  };
 
   const onChange = React.useCallback((value) => {
-    setValue(value);
+    setText(value);
   }, []);
 
   const options = React.useMemo(
@@ -112,12 +136,12 @@ export const AddPost = () => {
       />
       <SimpleMDE
         className={styles.editor}
-        value={value}
+        value={text}
         onChange={onChange}
         options={options}
       />
       <div className={styles.buttons}>
-        <Button size="large" variant="contained">
+        <Button onClick={onSubmit} size="large" variant="contained">
           Опубликовать
         </Button>
         <a href="/">
