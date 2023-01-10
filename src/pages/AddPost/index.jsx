@@ -8,10 +8,11 @@ import "easymde/dist/easymde.min.css";
 import styles from "./AddPost.module.scss";
 import { useSelector, useDispatch } from "react-redux";
 import { selectIsAuth } from "../../redux/slices/auth";
-import { useNavigate, Navigate } from "react-router-dom";
+import { useNavigate, Navigate, useParams } from "react-router-dom";
 import axios from "../../axios";
 
 export const AddPost = () => {
+  const { id } = useParams()
   const navigate = useNavigate();
   const isAuth = useSelector(selectIsAuth);
   const [isLoading, setIsLoading] = React.useState(false);
@@ -20,6 +21,8 @@ export const AddPost = () => {
   const [imageUrl, setImageUrl] = React.useState("");
   const [tags, setTags] = React.useState("");
   const inputFileRef = React.useRef(null);
+
+  const isEditing = Boolean(id)
 
   console.log({ title, tags, text });
 
@@ -53,9 +56,9 @@ export const AddPost = () => {
         text,
       };
 
-      const { data } = await axios.post("/posts", fields);
-      const id = data._id;
-      navigate(`/posts/${id}`);
+      const { data } = isEditing ? await axios.patch(`/posts/${id}`, fields) : await axios.post("/posts", fields);
+      const _id = isEditing ? id : data._id;
+      navigate(`/posts/${_id}`);
     } catch (error) {
       alert(`Ошибка при создании статьи!`);
       console.warn(error);
@@ -65,6 +68,17 @@ export const AddPost = () => {
   const onChange = React.useCallback((value) => {
     setText(value);
   }, []);
+
+  React.useEffect(() => {
+    if(id) {
+      axios.get(`/posts/${id}`).then( ({data}) => {
+        setTitle(data.title)
+        setText(data.text)
+        setImageUrl(data.imageUrl)
+        setTags(data.tags.join(','))
+      })
+    }
+  }, [])
 
   const options = React.useMemo(
     () => ({
@@ -142,7 +156,7 @@ export const AddPost = () => {
       />
       <div className={styles.buttons}>
         <Button onClick={onSubmit} size="large" variant="contained">
-          Опубликовать
+          {isEditing ? 'Сохранить' : 'Опубликовать'}
         </Button>
         <a href="/">
           <Button size="large">Отмена</Button>
